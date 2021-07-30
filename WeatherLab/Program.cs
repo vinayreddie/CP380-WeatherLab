@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Linq;
+using System.Collections.Generic;
 
 
 namespace WeatherLab
@@ -12,42 +13,67 @@ namespace WeatherLab
         {
             var measurements = new WeatherSqliteContext(dbfile).Weather;
 
-            var total_2020_precipitation = ?? TODO ??
+            var total_2020_precipitation = measurements.Where(mt=>mt.year == 2020)
+                                           .Sum(mt=>mt.precipitation);
             Console.WriteLine($"Total precipitation in 2020: {total_2020_precipitation} mm\n");
+         
+            var hdd = measurements
+                
+                .GroupBy(mt => mt.year)
 
-            //
-            // Heating Degree days have a mean temp of < 18C
-            //   see: https://en.wikipedia.org/wiki/Heating_degree_day
-            //
+               .Select(
+                   groupByYear => new {
+                       year = groupByYear.Key,
+                       Hd = groupByYear.Where(row => row.meantemp < 18).Count()
 
-            // ?? TODO ??
+                   }
+                );
+            var cdd = measurements
+                .Where(mt => mt.meantemp >= 18)
+                .GroupBy(mt => mt.year)
+                   .Select(
+                   groupByYear => new {
+                       year = groupByYear.Key,
+                       cd = groupByYear.Where(row => row.meantemp >= 18).Count()
 
-            //
-            // Cooling degree days have a mean temp of >=18C
-            //
+                   }
+                );
 
-            // ?? TODO ??
 
-            //
-            // Most Variable days are the days with the biggest temperature
-            // range. That is, the largest difference between the maximum and
-            // minimum temperature
-            //
-            // Oh: and number formatting to zero pad.
-            // 
-            // For example, if you want:
-            //      var x = 2;
-            // To display as "0002" then:
-            //      $"{x:d4}"
-            //
-            Console.WriteLine("Year\tHDD\tCDD");
+          
+            var grouping = from h in hdd
+                        join c in cdd on h.year equals c.year
+                         orderby h.year
+                         select new { Year = h.year, hdd = h.Hd, cdd = c.cd };
+          
 
-            // ?? TODO ??
+
+
+            Console.WriteLine("Year\thdd\tcdd");
+            foreach (var i in grouping)
+            {
+                Console.WriteLine($"{i.Year}\t{i.hdd}\t{i.cdd}");
+            }
+           
+               
+
 
             Console.WriteLine("\nTop 5 Most Variable Days");
             Console.WriteLine("YYYY-MM-DD\tDelta");
-
-            // ?? TODO ??
+            var mvd = measurements.Select(mt => new
+            {
+                year = mt.year,
+                month = mt.month,
+                day = mt.day,
+                delta = mt.maxtemp - mt.mintemp,
+            });
+            var top5 = mvd
+                                                .OrderByDescending(measurement => measurement.delta)
+                                                .Take(5);
+            foreach (var day in top5)
+            {
+                Console.WriteLine($"{day.year:d4}-{day.month:d2}-{day.day:d2}\t{day.delta:0.00}");
+            }
         }
     }
 }
